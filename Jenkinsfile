@@ -184,59 +184,15 @@ spec:
                     
                     withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GH_TOKEN', usernameVariable: 'GH_USER')]) {
                         sh """
-                            set -e
-                            
-                            echo "=== Current directory ==="
-                            pwd
-                            ls -la
-                            
-                            echo "=== Checking if charts/${APP_NAME} exists ==="
-                            if [ ! -d "charts/${APP_NAME}" ]; then
-                                echo "ERROR: charts/${APP_NAME} directory not found!"
-                                exit 1
-                            fi
-                            
                             cd charts/${APP_NAME}
-                            
-                            echo "=== Git status before changes ==="
-                            git status
-                            
-                            echo "=== Fetching latest from origin ==="
                             git fetch origin main
-                            
-                            echo "=== Switching to main branch ==="
                             git checkout -B main origin/main
-                            
-                            echo "=== Current values.yaml tag ==="
-                            grep "tag:" values.yaml || echo "No tag found"
-                            
-                            echo "=== Updating image tag to ${DOCKER_TAG} ==="
                             sed -i 's/tag: .*/tag: ${DOCKER_TAG}/' values.yaml
-                            
-                            echo "=== New values.yaml tag ==="
-                            grep "tag:" values.yaml
-                            
-                            echo "=== Configuring git ==="
                             git config user.email "jenkins@ci.local"
                             git config user.name "Jenkins CI"
-                            
-                            echo "=== Adding changes ==="
                             git add values.yaml
-                            
-                            echo "=== Git diff ==="
-                            git diff --cached
-                            
-                            echo "=== Committing changes ==="
-                            if git diff --cached --quiet; then
-                                echo "No changes to commit"
-                            else
-                                git commit -m "chore: Update ${APP_NAME} image to ${DOCKER_TAG}"
-                                
-                                echo "=== Pushing to GitHub ==="
-                                git push https://${GH_USER}:${GH_TOKEN}@github.com/test-booking-application/${APP_NAME}.git HEAD:main
-                                
-                                echo "✅ Successfully pushed changes to GitHub"
-                            fi
+                            git commit -m "chore: Update ${APP_NAME} image to ${DOCKER_TAG}" || true
+                            git push https://${GH_USER}:${GH_TOKEN}@github.com/test-booking-application/${APP_NAME}.git HEAD:main
                         """
                     }
                     
