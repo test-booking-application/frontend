@@ -49,14 +49,14 @@ spec:
 
     environment {
         // App Config
-        APP_NAME = 'frontend' // Change this per service
+        APP_NAME = 'frontend'
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '044302809167.dkr.ecr.us-east-1.amazonaws.com'
         IMAGE_URI = "${ECR_REGISTRY}/ticket-booking/${APP_NAME}"
         
         // SonarQube Config
         SONAR_HOST_URL = 'https://sonarcloud.io'
-        SONAR_ORG = 'test-booking-application' // Your SonarCloud Organization Key
+        SONAR_ORG = 'test-booking-application'
     }
 
     stages {
@@ -64,7 +64,6 @@ spec:
             steps {
                 checkout scm
                 script {
-                    // Capture Git Commit Hash for Tagging
                     env.GIT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     env.DOCKER_TAG = "${BUILD_NUMBER}-${env.GIT_COMMIT}"
                 }
@@ -110,7 +109,6 @@ spec:
             steps {
                 container('docker') {
                     script {
-                        // Start Docker daemon and wait for it to be ready
                         sh '''
                             dockerd-entrypoint.sh &
                             sleep 10
@@ -131,7 +129,6 @@ spec:
             steps {
                 container('docker') {
                     script {
-                        // Install Trivy in the docker container
                         sh '''
                             apk add --no-cache wget tar
                             wget -q https://github.com/aquasecurity/trivy/releases/download/v0.48.0/trivy_0.48.0_Linux-64bit.tar.gz
@@ -140,14 +137,9 @@ spec:
                             chmod +x /usr/local/bin/trivy
                         '''
                         
-                        // Export Docker image to tarball to avoid Docker API version issues
                         sh "docker save ${IMAGE_URI}:${DOCKER_TAG} -o /tmp/image.tar"
-                        
-                        // Scan the tarball
                         sh "trivy image --input /tmp/image.tar --severity CRITICAL --exit-code 1 --no-progress"
                         sh "trivy image --input /tmp/image.tar --severity HIGH,CRITICAL --no-progress > trivy-report.txt"
-                        
-                        // Clean up
                         sh "rm /tmp/image.tar"
                     }
                 }
@@ -159,19 +151,14 @@ spec:
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId: 'aws-ecr-creds', passwordVariable: 'ECR_PASSWORD', usernameVariable: 'ECR_USERNAME')]) {
                         script {
-                            // Install AWS CLI in docker container
                             sh '''
                                 apk add --no-cache python3 py3-pip
                                 pip3 install --break-system-packages awscli
                             '''
                             
-                            // Login to ECR
                             sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
-                            
-                            // Push specific tag (always)
                             sh "docker push ${IMAGE_URI}:${DOCKER_TAG}"
                             
-                            // Push 'latest' tag ONLY for main branch
                             if (env.BRANCH_NAME == 'main') {
                                 echo "🚀 Pushing 'latest' tag for main branch"
                                 sh "docker push ${IMAGE_URI}:latest"
@@ -197,18 +184,59 @@ spec:
                     
                     withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GH_TOKEN', usernameVariable: 'GH_USER')]) {
                         sh """
+                            set -e
+                            
+                            echo "=== Current directory ==="
+                            pwd
+                            ls -la
+                            
+                            echo "=== Checking if charts/${APP_NAME} exists ==="
+                            if [ ! -d "charts/${APP_NAME}" ]; then
+                                echo "ERROR: charts/${APP_NAME} directory not found!"
+                                exit 1
+                            fi
+                            
                             cd charts/${APP_NAME}
-
-                            # make sure we are on a real local main branch, not detached HEAD
-                            git fetch origin
+                            
+                            echo "=== Git status before changes ==="
+                            git status
+                            
+                            echo "=== Fetching latest from origin ==="
+                            git fetch origin main
+                            
+                            echo "=== Switching to main branch ==="
                             git checkout -B main origin/main
-        
+                            
+                            echo "=== Current values.yaml tag ==="
+                            grep "tag:" values.yaml || echo "No tag found"
+                            
+                            echo "=== Updating image tag to ${DOCKER_TAG} ==="
                             sed -i 's/tag: .*/tag: ${DOCKER_TAG}/' values.yaml
+                            
+                            echo "=== New values.yaml tag ==="
+                            grep "tag:" values.yaml
+                            
+                            echo "=== Configuring git ==="
                             git config user.email "jenkins@ci.local"
                             git config user.name "Jenkins CI"
+                            
+                            echo "=== Adding changes ==="
                             git add values.yaml
-                            git commit -m "chore: Update ${APP_NAME} image to ${DOCKER_TAG}" || true
-                            git push https://${GH_USER}:${GH_TOKEN}@github.com/test-booking-application/${APP_NAME}.git HEAD:main
+                            
+                            echo "=== Git diff ==="
+                            git diff --cached
+                            
+                            echo "=== Committing changes ==="
+                            if git diff --cached --quiet; then
+                                echo "No changes to commit"
+                            else
+                                git commit -m "chore: Update ${APP_NAME} image to ${DOCKER_TAG}"
+                                
+                                echo "=== Pushing to GitHub ==="
+                                git push https://${GH_USER}:${GH_TOKEN}@github.com/test-booking-application/${APP_NAME}.git HEAD:main
+                                
+                                echo "✅ Successfully pushed changes to GitHub"
+                            fi
                         """
                     }
                     
