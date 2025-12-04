@@ -183,7 +183,6 @@ spec:
                 }
             }
         }
-
     }
 
     post {
@@ -221,3 +220,4 @@ spec:
             echo "❌ CI Pipeline failed."
         }
     }
+}
