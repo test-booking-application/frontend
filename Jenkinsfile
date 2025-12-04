@@ -197,7 +197,6 @@ spec:
                     echo "🔄 Updating image tag in Git for ArgoCD..."
                     
                     withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GH_TOKEN', usernameVariable: 'GH_USER')]) {
-                        // Update values.yaml with new image tag
                         sh """
                             cd charts/${APP_NAME}
 
@@ -222,4 +221,3 @@ spec:
             echo "❌ CI Pipeline failed."
         }
     }
-}
