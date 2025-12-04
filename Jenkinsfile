@@ -196,7 +196,7 @@ spec:
                 if (env.BRANCH_NAME == 'main') {
                     echo "🔄 Updating image tag in Git for ArgoCD..."
                     
-                    withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GITHUB_TOKEN', usernameVariable: 'GITHUB_USER')]) {
+                    withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GH_TOKEN', usernameVariable: 'GH_USER')]) {
                         // Update values.yaml with new image tag
                         sh """
                             cd charts/${APP_NAME}
@@ -210,7 +210,7 @@ spec:
                             git config user.name "Jenkins CI"
                             git add values.yaml
                             git commit -m "chore: Update ${APP_NAME} image to ${DOCKER_TAG}" || true
-                            git push https://\${GITHUB_TOKEN}@github.com/test-booking-application/${APP_NAME}.git HEAD:main
+                            git push https://${GH_TOKEN}@github.com/test-booking-application/${APP_NAME}.git HEAD:main
                         """
                     }
                     
