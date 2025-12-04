@@ -112,6 +112,10 @@ function App() {
                 {renderPage()}
             </main>
 
+            <footer className="app-footer">
+                <p>Owned by Dilip Nigam</p>
+            </footer>
+
             {showAuthModal && (
                 <AuthModal
                     mode={authMode}

@@ -161,3 +161,24 @@
     font-size: 18px;
     font-weight: 500;
 }
+
+.app-footer {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    font-size: 14px;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: var(--blur-light);
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.app-footer:hover {
+    opacity: 1;
+}
