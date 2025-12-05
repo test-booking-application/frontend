@@ -210,26 +210,36 @@ spec:
                     // Trigger ArgoCD sync
                     container('helm') {
                         sh """
-                            # Install kubectl
+                            # Install kubectl and argocd CLI
                             apk add --no-cache curl
                             curl -LO "https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
                             chmod +x kubectl
                             mv kubectl /usr/local/bin/
                             
-                            # Trigger hard refresh and sync
-                            kubectl patch application ${APP_NAME} -n argocd --type merge -p '{"metadata": {"annotations": {"argocd.argoproj.io/refresh": "hard"}}}'
+                            curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+                            chmod +x /usr/local/bin/argocd
+                            
+                            # Force ArgoCD to refresh from Git and sync
+                            kubectl patch application ${APP_NAME} -n argocd --type merge -p '{"operation": {"initiatedBy": {"username": "jenkins"}, "sync": {"revision": "HEAD"}}}'
+                            
+                            # Wait a moment for the patch to take effect
+                            sleep 3
                             
                             # Wait for sync to complete (timeout 5 minutes)
                             echo "⏳ Waiting for ArgoCD to sync..."
                             for i in \$(seq 1 60); do
                                 SYNC_STATUS=\$(kubectl get application ${APP_NAME} -n argocd -o jsonpath='{.status.sync.status}')
                                 HEALTH_STATUS=\$(kubectl get application ${APP_NAME} -n argocd -o jsonpath='{.status.health.status}')
+                                DEPLOYED_IMAGE=\$(kubectl get deployment ${APP_NAME} -n dev -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "not-deployed")
                                 
-                                echo "Sync: \$SYNC_STATUS | Health: \$HEALTH_STATUS"
+                                echo "Sync: \$SYNC_STATUS | Health: \$HEALTH_STATUS | Image: \$DEPLOYED_IMAGE"
                                 
-                                if [ "\$SYNC_STATUS" = "Synced" ] && [ "\$HEALTH_STATUS" = "Healthy" ]; then
-                                    echo "✅ ArgoCD deployment successful!"
-                                    exit 0
+                                # Check if the new image tag is deployed
+                                if echo "\$DEPLOYED_IMAGE" | grep -q "${DOCKER_TAG}"; then
+                                    if [ "\$SYNC_STATUS" = "Synced" ] && [ "\$HEALTH_STATUS" = "Healthy" ]; then
+                                        echo "✅ ArgoCD deployment successful with new image!"
+                                        exit 0
+                                    fi
                                 fi
                                 
                                 if [ "\$HEALTH_STATUS" = "Degraded" ]; then
