@@ -1,7 +1,7 @@
 image:
   repository: 044302809167.dkr.ecr.us-east-1.amazonaws.com/ticket-booking/frontend
   pullPolicy: IfNotPresent
-  tag: 4-0e34dd5bef1efd7946cca0e6b8697cacc826e81d
+  tag: 5-b7131d1a1fdcfc2305c74ad2e035d7c82ad254f9
 
 service:
   type: ClusterIP
