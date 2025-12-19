@@ -25,6 +25,8 @@ Create a default fully qualified app name.
 Common labels
 */}}
 {{- define "frontend.labels" -}}
+app: {{ include "frontend.name" . }}
+version: {{ .Chart.AppVersion | default "v1" | quote }}
 helm.sh/chart: {{ include "frontend.chart" . }}
 {{ include "frontend.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
