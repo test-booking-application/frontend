@@ -1,5 +1,5 @@
 image:
-  repository: 044302809167.dkr.ecr.us-east-1.amazonaws.com/ticket-booking/frontend
+  repository: 173235558072.dkr.ecr.us-east-1.amazonaws.com/ticket-booking/frontend
   pullPolicy: IfNotPresent
   tag: 24-ff8a38245e34afdd1f224b95f0ff63dd9b71d3dd
 
